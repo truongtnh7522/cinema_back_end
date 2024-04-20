@@ -8,6 +8,7 @@ import com.example.cinema_back_end.entities.User;
 import com.example.cinema_back_end.repositories.IPinCodeRepository;
 import com.example.cinema_back_end.security.jwt.JwtResponse;
 import com.example.cinema_back_end.security.jwt.JwtService;
+import com.example.cinema_back_end.security.repo.IUserRepository;
 import com.example.cinema_back_end.security.service.IUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -42,8 +43,10 @@ public class AuthController {
 
     @Autowired
     private IUserService userService;
-@Autowired
-private IPinCodeRepository pinCodeRepository;
+    @Autowired
+    private IPinCodeRepository pinCodeRepository;
+    @Autowired
+    private IUserRepository userRepository;
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody User user) {
         try {
@@ -69,11 +72,10 @@ private IPinCodeRepository pinCodeRepository;
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Đã xảy ra lỗi trong quá trình xử lý yêu cầu.");
         }
     }
-
     @PostMapping("/register")
     public ResponseEntity<?> register(@RequestBody User user) {
         try {
-            if (userService.findByUsername(user.getUsername()).isPresent()) {
+            if(userService.findByUsername(user.getUsername()).isPresent()){
                 throw new Exception("Đã tồn tại người dùng, vui lòng chọn tên đăng nhập khác");
             }
 
@@ -91,21 +93,22 @@ private IPinCodeRepository pinCodeRepository;
             newPinCode.setExpiredTime(LocalDateTime.now().plusMinutes(5));
             pinCodeRepository.save(newPinCode);
 
-            // Tiếp tục xử lý đăng ký người dùng
             String password = user.getPassword();
             user.setActive(false);
             userService.save(user);
             Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(user.getUsername(), password));
+                    new UsernamePasswordAuthenticationToken(user.getUsername(),password));
             SecurityContextHolder.getContext().setAuthentication(authentication);
 
             String jwt = jwtService.generateTokenLogin(authentication);
             UserDetails userDetails = (UserDetails) authentication.getPrincipal();
             User currentUser = userService.findByUsername(user.getUsername()).get();
             return ResponseEntity.ok(new JwtResponse(jwt, currentUser.getId(), userDetails.getUsername(), currentUser.getFullName()));
-        } catch (Exception e) {
+        }
+        catch (Exception e){
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
+
     }
 
     // Phương thức tạo mã PIN ngẫu nhiên
@@ -149,6 +152,8 @@ private IPinCodeRepository pinCodeRepository;
 
         System.out.println("Email gửi thành công!");
     }
+
+
     @PostMapping("/vertifyPin")
     public ResponseEntity<?> vertifyPin(@RequestBody PinCodeDTO request) {
         try {
@@ -161,11 +166,11 @@ private IPinCodeRepository pinCodeRepository;
             if (optionalPinCode.isPresent()) {
                 PinCode pin = optionalPinCode.get();
                 if (pin.getExpiredTime().isAfter(LocalDateTime.now())) {
-                    Optional<User> optionalUser = userService.findByUsername(username);
+                    Optional<User> optionalUser = userRepository.findByUsername(username);
                     if (optionalUser.isPresent()) {
                         User user = optionalUser.get();
                         user.setActive(true);
-                        userService.save(user);
+                        userRepository.save(user);
                         return ResponseEntity.ok("User activated successfully!");
                     } else {
                         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("User not found!");
