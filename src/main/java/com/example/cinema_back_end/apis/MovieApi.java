@@ -70,4 +70,10 @@ public class MovieApi {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(null);
         }
     }
+
+    @GetMapping("/recommended")
+    public ResponseEntity<List<MovieDTO>> getRecommendedMovies() {
+        List<MovieDTO> recommendedMovies = movieService.findRecommendedMovies();
+        return ResponseEntity.ok(recommendedMovies);
+    }
 }

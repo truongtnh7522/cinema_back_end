@@ -128,4 +128,35 @@ public class MovieService implements IMovieService{
         }
         return null;
     }
+
+    @Override
+    public List<MovieDTO> findRecommendedMovies() {
+        List<Movie> allMovies = movieRepository.findAll();
+        List<Movie> recommendedMovies = new ArrayList<>();
+
+        for (Movie movie : allMovies) {
+            double averageRating = calculateAverageRating(movie);
+            if (averageRating >= 4.0) {
+                recommendedMovies.add(movie);
+            }
+        }
+
+        return recommendedMovies.stream()
+                .map(movie -> modelMapper.map(movie, MovieDTO.class))
+                .collect(Collectors.toList());
+    }
+
+    private double calculateAverageRating(Movie movie) {
+        Set<FeedBack> feedbacks = movie.getFeedbacks();
+        if (feedbacks.isEmpty()) {
+            return 0.0; // Trả về 0 nếu không có feedback
+        }
+
+        double totalRating = 0.0;
+        for (FeedBack feedback : feedbacks) {
+            totalRating += feedback.getRate();
+        }
+
+        return totalRating / feedbacks.size();
+    }
 }
