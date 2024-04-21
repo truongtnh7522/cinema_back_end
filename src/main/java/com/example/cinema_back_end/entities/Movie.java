@@ -1,5 +1,6 @@
 package com.example.cinema_back_end.entities;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import lombok.Data;
 import lombok.Getter;
@@ -60,4 +61,7 @@ public class Movie {
     @JsonManagedReference
     private Set<FeedBack> feedbacks = new HashSet<>();
 
+    @JsonIgnore
+    @OneToMany(mappedBy = "movie")
+    private Set<UserMovieLikes> likedByUsers;
 }

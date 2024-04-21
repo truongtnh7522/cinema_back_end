@@ -4,13 +4,21 @@ import com.example.cinema_back_end.dtos.FeedBackDTO;
 import com.example.cinema_back_end.dtos.MovieDTO;
 import com.example.cinema_back_end.entities.FeedBack;
 import com.example.cinema_back_end.entities.Movie;
+import com.example.cinema_back_end.entities.User;
+import com.example.cinema_back_end.entities.UserMovieLikes;
 import com.example.cinema_back_end.repositories.IMovieRepository;
+import com.example.cinema_back_end.repositories.IUserMovieLikesRepository;
+import com.example.cinema_back_end.security.repo.IUserRepository;
+import lombok.var;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -19,7 +27,10 @@ public class MovieService implements IMovieService{
 
     @Autowired
     private IMovieRepository  movieRepository;
-
+    @Autowired
+    private IUserMovieLikesRepository userMovieLikesRepository;
+    @Autowired
+    private IUserRepository userRepository;
     @Autowired
     private ModelMapper modelMapper;
     @Override
@@ -32,17 +43,27 @@ public class MovieService implements IMovieService{
 
     @Override
     public MovieDTO getById(Integer movieId) {
-        Movie movie = movieRepository.getById(movieId);
-        if (movie != null) {
+        // Lấy thông tin về người dùng hiện tại từ context
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUsername = authentication.getName();
+        Optional<User> currentUserOptional = userRepository.findByUsername(currentUsername);
+
+        // Lấy thông tin về bộ phim từ cơ sở dữ liệu
+        Optional<Movie> movieOptional = movieRepository.findById(movieId);
+        if (movieOptional.isPresent() && currentUserOptional.isPresent()) {
+            Movie movie = movieOptional.get();
+            User currentUser = currentUserOptional.get();
+
+            // Kiểm tra xem người dùng hiện tại đã like bộ phim hay chưa
+            boolean isLikedByCurrentUser = userMovieLikesRepository.existsByUserAndMovie(currentUser, movie);
+
             // Ánh xạ thông tin từ đối tượng Movie sang MovieDTO
             MovieDTO movieDTO = modelMapper.map(movie, MovieDTO.class);
-            // Lấy danh sách các phản hồi của bộ phim
-            List<FeedBackDTO> topLevelFeedbackDTOs = getTopLevelFeedbackDTOs(movie.getFeedbacks());
-            // Ánh xạ thông tin về phản hồi và phản hồi con vào MovieDTO
-            movieDTO.setFeedbacks(topLevelFeedbackDTOs);
+            movieDTO.setLikedByCurrentUser(isLikedByCurrentUser); // Đặt thông tin về việc like của người dùng hiện tại vào DTO
+
             return movieDTO;
         } else {
-            return null; // hoặc xử lý nếu không tìm thấy bộ phim
+            return null; // hoặc xử lý nếu không tìm thấy bộ phim hoặc người dùng
         }
     }
 
@@ -78,5 +99,33 @@ public class MovieService implements IMovieService{
         return movieRepository.findMoviesByIsShowingAndNameContaining(1,keyword)
                 .stream().map(movie -> modelMapper.map(movie,MovieDTO.class))
                 .collect(Collectors.toList());
+    }
+
+    @Override
+    public void likeMovie(Integer userId, Integer movieId) {
+        Optional<User> userOptional = userRepository.findById(userId);
+        if (userOptional.isPresent()) {
+            Optional<Movie> movieOptional = movieRepository.findById(movieId);
+            if (movieOptional.isPresent()) {
+                User user = userOptional.get();
+                Movie movie = movieOptional.get();
+                UserMovieLikes userMovieLikes = new UserMovieLikes();
+                userMovieLikes.setUser(user);
+                userMovieLikes.setMovie(movie);
+                userMovieLikesRepository.save(userMovieLikes);
+            } else {
+                throw new RuntimeException("Movie not found with ID: " + movieId);
+            }
+        } else {
+            throw new RuntimeException("User not found with ID: " + userId);
+        }
+    }
+    public List<Movie> getLikedMoviesByUser(Integer userId) {
+        Optional<User> userOptional = userRepository.findById(userId);
+        if (userOptional.isPresent()) {
+            User user = userOptional.get();
+            return userMovieLikesRepository.findMoviesByUser(user);
+        }
+        return null;
     }
 }

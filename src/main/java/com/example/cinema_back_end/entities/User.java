@@ -30,4 +30,7 @@ public class User {
 
     @Column(nullable = false)
     private Boolean active;
+
+    @OneToMany(mappedBy = "user")
+    private Set<UserMovieLikes> likedMovies;
 }

@@ -22,4 +22,6 @@ public class MovieDTO {
     private String language;
     private String rated;
     private List<FeedBackDTO> feedbacks;
+    private boolean likedByCurrentUser;
+
 }
