@@ -35,10 +35,32 @@ public class MovieService implements IMovieService{
     private ModelMapper modelMapper;
     @Override
     public List<MovieDTO> findAllShowingMovies() {
-        return movieRepository.findMoviesByIsShowingOrderByIdDesc(1)
-                .stream()
-                .map(movie -> modelMapper.map(movie, MovieDTO.class))
-                .collect(Collectors.toList());
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String currentUsername = authentication.getName();
+        Optional<User> currentUserOptional = userRepository.findByUsername(currentUsername);
+
+        List<MovieDTO> movieDTOs = new ArrayList<>();
+
+        List<Movie> movies = movieRepository.findAll();
+
+        if (currentUserOptional.isPresent()) {
+            User currentUser = currentUserOptional.get();
+
+            for (Movie movie : movies) {
+                boolean isLikedByCurrentUser = userMovieLikesRepository.existsByUserAndMovie(currentUser, movie);
+
+                MovieDTO movieDTO = modelMapper.map(movie, MovieDTO.class);
+                movieDTO.setLikedByCurrentUser(isLikedByCurrentUser);
+
+                Set<FeedBack> feedbacks = movie.getFeedbacks();
+                List<FeedBackDTO> topLevelFeedbackDTOs = getTopLevelFeedbackDTOs(feedbacks);
+                movieDTO.setFeedbacks(topLevelFeedbackDTOs);
+
+                movieDTOs.add(movieDTO);
+            }
+        }
+
+        return movieDTOs;
     }
 
     @Override
@@ -115,10 +137,18 @@ public class MovieService implements IMovieService{
             if (movieOptional.isPresent()) {
                 User user = userOptional.get();
                 Movie movie = movieOptional.get();
-                UserMovieLikes userMovieLikes = new UserMovieLikes();
-                userMovieLikes.setUser(user);
-                userMovieLikes.setMovie(movie);
-                userMovieLikesRepository.save(userMovieLikes);
+
+                boolean isLiked = userMovieLikesRepository.existsByUserAndMovie(user, movie);
+
+                if (isLiked) {
+                    UserMovieLikes userMovieLikes = userMovieLikesRepository.findByUserAndMovie(user, movie);
+                    userMovieLikesRepository.delete(userMovieLikes);
+                } else {
+                    UserMovieLikes userMovieLikes = new UserMovieLikes();
+                    userMovieLikes.setUser(user);
+                    userMovieLikes.setMovie(movie);
+                    userMovieLikesRepository.save(userMovieLikes);
+                }
             } else {
                 throw new RuntimeException("Movie not found with ID: " + movieId);
             }
@@ -126,6 +156,7 @@ public class MovieService implements IMovieService{
             throw new RuntimeException("User not found with ID: " + userId);
         }
     }
+
     public List<Movie> getLikedMoviesByUser(Integer userId) {
         Optional<User> userOptional = userRepository.findById(userId);
         if (userOptional.isPresent()) {

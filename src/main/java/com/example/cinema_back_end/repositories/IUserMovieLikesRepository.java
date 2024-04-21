@@ -15,4 +15,6 @@ public interface IUserMovieLikesRepository extends JpaRepository<UserMovieLikes,
     List<Movie> findMoviesByUser(User user);
     @Query("SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END FROM UserMovieLikes u WHERE u.user = :user AND u.movie = :movie")
     boolean existsByUserAndMovie(User user, Movie movie);
+
+    UserMovieLikes findByUserAndMovie(User user, Movie movie);
 }
