@@ -61,6 +61,11 @@ public class MovieService implements IMovieService{
             MovieDTO movieDTO = modelMapper.map(movie, MovieDTO.class);
             movieDTO.setLikedByCurrentUser(isLikedByCurrentUser); // Đặt thông tin về việc like của người dùng hiện tại vào DTO
 
+            // Lấy danh sách feedback và ánh xạ thành DTOs
+            Set<FeedBack> feedbacks = movie.getFeedbacks();
+            List<FeedBackDTO> topLevelFeedbackDTOs = getTopLevelFeedbackDTOs(feedbacks);
+            movieDTO.setFeedbacks(topLevelFeedbackDTOs);
+
             return movieDTO;
         } else {
             return null; // hoặc xử lý nếu không tìm thấy bộ phim hoặc người dùng
@@ -74,7 +79,7 @@ public class MovieService implements IMovieService{
             if (feedback.getParentFeedback() == null) {
                 FeedBackDTO feedbackDTO = modelMapper.map(feedback, FeedBackDTO.class);
                 // Recursive call to get child feedbacks
-                List<FeedBackDTO> childFeedbackDTOs = getChildFeedbackDTOs(feedback.getChildFeedbacks());
+                List<FeedBackDTO> childFeedbackDTOs = getChildFeedbackDTOs(feedback, feedback.getChildFeedbacks());
                 feedbackDTO.setChildFeedbacks(childFeedbackDTOs);
                 topLevelFeedbackDTOs.add(feedbackDTO);
             }
@@ -82,17 +87,18 @@ public class MovieService implements IMovieService{
         return topLevelFeedbackDTOs;
     }
 
-    private List<FeedBackDTO> getChildFeedbackDTOs(Set<FeedBack> feedbacks) {
+    private List<FeedBackDTO> getChildFeedbackDTOs(FeedBack parentFeedback, Set<FeedBack> feedbacks) {
         List<FeedBackDTO> childFeedbackDTOs = new ArrayList<>();
         for (FeedBack feedback : feedbacks) {
             FeedBackDTO feedbackDTO = modelMapper.map(feedback, FeedBackDTO.class);
             // Recursive call to get child feedbacks
-            List<FeedBackDTO> grandChildFeedbackDTOs = getChildFeedbackDTOs(feedback.getChildFeedbacks());
+            List<FeedBackDTO> grandChildFeedbackDTOs = getChildFeedbackDTOs(feedback, feedback.getChildFeedbacks());
             feedbackDTO.setChildFeedbacks(grandChildFeedbackDTOs);
             childFeedbackDTOs.add(feedbackDTO);
         }
         return childFeedbackDTOs;
     }
+
 
     @Override
     public List<MovieDTO> findAllShowingMoviesByName(String keyword) {
