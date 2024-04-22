@@ -29,6 +29,7 @@ public class FeedBackDTO {
     private Integer updateBy;
     private String content;
     private Double rate;
+    private String fullName;
     private List<FeedBackDTO> childFeedbacks;
     public List<FeedBackDTO> getChildFeedbacks() {
         return childFeedbacks;

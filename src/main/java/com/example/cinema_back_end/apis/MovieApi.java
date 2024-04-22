@@ -28,7 +28,10 @@ public class MovieApi {
 
     @GetMapping("/showing")
     public ResponseEntity<List<MovieDTO>> findAllShowingMovies(){
-        return new ResponseEntity<>(movieService.findAllShowingMovies(), HttpStatus.OK);
+        return new ResponseEntity<>(movieService.findAllShowingMovies(), HttpStatus.OK);}
+    @GetMapping("/showingnolike")
+    public ResponseEntity<List<MovieDTO>> findAllShowingMoviesNoLike(){
+        return new ResponseEntity<>(movieService.findAllShowingMoviesNolike(), HttpStatus.OK);
     }
 
     @GetMapping("/details")

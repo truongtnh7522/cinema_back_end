@@ -15,4 +15,5 @@ public interface IMovieService {
     public List<Movie> getLikedMoviesByUser(Integer userId);
     void likeMovie(Integer userId, Integer movieId);
     List<MovieDTO> findRecommendedMovies();
+    public List<MovieDTO> findAllShowingMoviesNolike();
 }

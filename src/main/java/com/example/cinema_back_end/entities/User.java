@@ -1,12 +1,14 @@
 package com.example.cinema_back_end.entities;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
+import lombok.Getter;
 
 import javax.persistence.*;
 import java.util.Set;
 
 @Entity
 @Data
+@Getter
 @Table(name = "userr")
 @JsonIgnoreProperties({ "likedMovies"})
 public class User {
